@@ -137,7 +137,7 @@ mod tests {
   <body>
   <header>
     <nav>
-      <a href=/>Doginals<sup>alpha</sup></a>
+      <a href=/>Junkinals<sup>alpha</sup></a>
       .*
       <a href=/rare.txt>rare.txt</a>
       <form action=/search method=get>
