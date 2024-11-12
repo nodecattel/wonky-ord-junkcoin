@@ -12,7 +12,7 @@ pub(crate) use {
   home::HomeHtml,
   iframe::Iframe,
   input::InputHtml,
-  inscription::{InscriptionByAddressJson, InscriptionHtml, InscriptionJson, ShibescriptionJson},
+  inscription::{InscriptionByAddressJson, InscriptionHtml, InscriptionJson, JunkscriptionJson},
   inscriptions::InscriptionsHtml,
   output::AddressOutputJson,
   output::OutputHtml,
@@ -163,7 +163,7 @@ mod tests {
         domain: None,
         index_sats: true,
       }),),
-      r".*<nav>\s*<a href=/>Doginals<sup>alpha</sup></a>.*"
+      r".*<nav>\s*<a href=/>Junkinals<sup>alpha</sup></a>.*"
     );
   }
 
@@ -175,7 +175,7 @@ mod tests {
         domain: None,
         index_sats: false,
       }),),
-      r".*<nav>\s*<a href=/>Doginals<sup>alpha</sup></a>.*\s*<form action=/search.*",
+      r".*<nav>\s*<a href=/>Junkinals<sup>alpha</sup></a>.*\s*<form action=/search.*",
     );
   }
 
@@ -187,7 +187,7 @@ mod tests {
         domain: None,
         index_sats: true,
       }),),
-      r".*<nav>\s*<a href=/>Doginals<sup>signet</sup></a>.*"
+      r".*<nav>\s*<a href=/>Junkinals<sup>signet</sup></a>.*"
     );
   }
 }

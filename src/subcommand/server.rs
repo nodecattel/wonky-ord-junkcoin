@@ -17,7 +17,7 @@ use {
       InputHtml, InscriptionByAddressJson, InscriptionHtml, InscriptionJson, InscriptionsHtml,
       OutputHtml, OutputJson, PageContent, PageHtml, PreviewAudioHtml, PreviewImageHtml,
       PreviewModelHtml, PreviewPdfHtml, PreviewTextHtml, Operation, PreviewUnknownHtml, PreviewVideoHtml,
-      RangeHtml, RareTxt, SatHtml, ShibescriptionJson, TransactionHtml, Utxo, DRC20,
+      RangeHtml, RareTxt, SatHtml, JunkscriptionJson, TransactionHtml, Utxo, DRC20,
     },
   },
   axum::{
@@ -296,16 +296,16 @@ impl Server {
         .route("/inscription/:inscription_id", get(Self::inscription))
         .route("/inscriptions", get(Self::inscriptions))
         .route("/inscriptions/:from", get(Self::inscriptions_from))
-        .route("/shibescription/:inscription_id", get(Self::inscription))
-        .route("/shibescriptions", get(Self::inscriptions))
-        .route("/shibescriptions/:from", get(Self::inscriptions_from))
+        .route("/Junkscription/:inscription_id", get(Self::inscription))
+        .route("/Junkscriptions", get(Self::inscriptions))
+        .route("/Junkscriptions/:from", get(Self::inscriptions_from))
         .route(
-          "/shibescriptions_on_outputs",
+          "/Junkscriptions_on_outputs",
           get(Self::inscriptions_by_outputs),
         )
         .route(
-          "/shibescriptions_by_outputs",
-          get(Self::shibescriptions_by_outputs),
+          "/Junkscriptions_by_outputs",
+          get(Self::Junkscriptions_by_outputs),
         )
         .route("/install.sh", get(Self::install_script))
         .route("/ordinal/:sat", get(Self::ordinal))
@@ -2110,7 +2110,7 @@ impl Server {
     } else if OUTPOINT.is_match(query) {
       Ok(Redirect::to(&format!("/output/{query}")))
     } else if INSCRIPTION_ID.is_match(query) {
-      Ok(Redirect::to(&format!("/shibescription/{query}")))
+      Ok(Redirect::to(&format!("/Junkscription/{query}")))
     } else if DUNE.is_match(query) {
       Ok(Redirect::to(&format!("/dune/{query}")))
     } else if DUNE_ID.is_match(query) {
@@ -2162,8 +2162,8 @@ impl Server {
 
     let chain = page_config.chain;
     match chain {
-      Chain::Mainnet => builder.title("Shibescriptions"),
-      _ => builder.title(format!("Shibescriptions – {chain:?}")),
+      Chain::Mainnet => builder.title("Junkscriptions"),
+      _ => builder.title(format!("Junkscriptions – {chain:?}")),
     };
 
     builder.generator(Some("ord".to_string()));
@@ -2171,10 +2171,10 @@ impl Server {
     for (number, id) in index.get_feed_inscriptions(300)? {
       builder.item(
         rss::ItemBuilder::default()
-          .title(format!("Shibescription {number}"))
-          .link(format!("/shibescription/{id}"))
+          .title(format!("Junkscription {number}"))
+          .link(format!("/Junkscription/{id}"))
           .guid(Some(rss::Guid {
-            value: format!("/shibescription/{id}"),
+            value: format!("/Junkscription/{id}"),
             permalink: true,
           }))
           .build(),
@@ -2477,7 +2477,7 @@ impl Server {
       }
 
       Ok(
-        Json(ShibescriptionJson {
+        Json(JunkscriptionJson {
           chain: page_config.chain,
           genesis_fee: entry.fee,
           genesis_height: entry.height,
@@ -2552,7 +2552,7 @@ impl Server {
     Ok(Json(validate_response).into_response())
   }
 
-  async fn shibescriptions_by_outputs(
+  async fn Junkscriptions_by_outputs(
     Extension(index): Extension<Arc<Index>>,
     Query(query): Query<OutputsQuery>,
   ) -> ServerResult<Response> {
@@ -3241,7 +3241,7 @@ mod tests {
   fn search_by_query_returns_inscription() {
     TestServer::new().assert_redirect(
       "/search?query=0000000000000000000000000000000000000000000000000000000000000000i0",
-      "/shibescription/0000000000000000000000000000000000000000000000000000000000000000i0",
+      "/Junkscription/0000000000000000000000000000000000000000000000000000000000000000i0",
     );
   }
 
@@ -3283,7 +3283,7 @@ mod tests {
   fn search_for_inscription_id_returns_inscription() {
     TestServer::new().assert_redirect(
       "/search/0000000000000000000000000000000000000000000000000000000000000000i0",
-      "/shibescription/0000000000000000000000000000000000000000000000000000000000000000i0",
+      "/Junkscription/0000000000000000000000000000000000000000000000000000000000000000i0",
     );
   }
 
@@ -4201,9 +4201,9 @@ mod tests {
     server.mine_blocks(1);
 
     server.assert_response_regex(
-      format!("/shibescription/{}", InscriptionId::from(txid)),
+      format!("/Junkscription/{}", InscriptionId::from(txid)),
       StatusCode::OK,
-      ".*<title>Shibescription 0</title>.*",
+      ".*<title>Junkscription 0</title>.*",
     );
   }
 
@@ -4223,7 +4223,7 @@ mod tests {
     server.mine_blocks(1);
 
     server.assert_response_regex(
-      format!("/shibescription/{}", InscriptionId::from(txid)),
+      format!("/Junkscription/{}", InscriptionId::from(txid)),
       StatusCode::OK,
       r".*<dt>sat</dt>\s*<dd><a href=/sat/100000000000000>100000000000000</a></dd>\s*<dt>preview</dt>.*",
     );
@@ -4245,7 +4245,7 @@ mod tests {
     server.mine_blocks(1);
 
     server.assert_response_regex(
-      format!("/shibescription/{}", InscriptionId::from(txid)),
+      format!("/Junkscription/{}", InscriptionId::from(txid)),
       StatusCode::OK,
       r".*<dt>output value</dt>\s*<dd>5000000000</dd>\s*<dt>preview</dt>.*",
     );
@@ -4281,7 +4281,7 @@ mod tests {
     server.assert_response_regex(
       "/feed.xml",
       StatusCode::OK,
-      ".*<title>Shibescription 0</title>.*",
+      ".*<title>Junkscription 0</title>.*",
     );
   }
 
@@ -4360,7 +4360,7 @@ mod tests {
   #[test]
   fn inscriptions_page_with_no_prev_or_next() {
     TestServer::new_with_sat_index().assert_response_regex(
-      "/shibescriptions",
+      "/Junkscriptions",
       StatusCode::OK,
       ".*prev\nnext.*",
     );
@@ -4384,9 +4384,9 @@ mod tests {
     server.mine_blocks(1);
 
     server.assert_response_regex(
-      "/shibescriptions",
+      "/Junkscriptions",
       StatusCode::OK,
-      ".*<a class=prev href=/shibescriptions/0>prev</a>\nnext.*",
+      ".*<a class=prev href=/Junkscriptions/0>prev</a>\nnext.*",
     );
   }
 
@@ -4408,9 +4408,9 @@ mod tests {
     server.mine_blocks(1);
 
     server.assert_response_regex(
-      "/shibescriptions/0",
+      "/Junkscriptions/0",
       StatusCode::OK,
-      ".*prev\n<a class=next href=/shibescriptions/100>next</a>.*",
+      ".*prev\n<a class=next href=/Junkscriptions/100>next</a>.*",
     );
   }
 

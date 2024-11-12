@@ -54,10 +54,10 @@ mod tests {
       .to_string(),
       "<h2>Latest Junkscriptions</h2>
 <div class=thumbnails>
-  <a href=/shibescription/1{64}i1><iframe .* src=/preview/1{64}i1></iframe></a>
-  <a href=/shibescription/2{64}i2><iframe .* src=/preview/2{64}i2></iframe></a>
+  <a href=/Junkscription/1{64}i1><iframe .* src=/preview/1{64}i1></iframe></a>
+  <a href=/Junkscription/2{64}i2><iframe .* src=/preview/2{64}i2></iframe></a>
 </div>
-<div class=center><a href=/shibescriptions>more</a></div>
+<div class=center><a href=/Junkscriptions>more</a></div>
 <h2>Latest Blocks</h2>
 <ol start=1260001 reversed class=blocks>
   <li><a href=/block/1{64}>1{64}</a></li>
