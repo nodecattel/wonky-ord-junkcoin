@@ -1,4 +1,4 @@
-use crate::drc20::operation::{Action, InscriptionOp};
+use crate::jkc20::operation::{Action, InscriptionOp};
 use crate::inscription::ParsedInscription;
 use crate::sat::Sat;
 use crate::sat_point::SatPoint;

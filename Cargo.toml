@@ -1,12 +1,12 @@
 [package]
-name = "ord-dogecoin"
-description = "◉ Ordinal wallet and block explorer for dogecoin"
+name = "ord-junkcoin"
+description = "◉ Ordinal wallet and block explorer for junkcoin"
 version = "0.5.1"
 license = "CC0-1.0"
 edition = "2021"
 autotests = false
-homepage = "https://github.com/apezord/ord-dogecoin"
-repository = "https://github.com/apezord/ord-dogecoin"
+homepage = "https://github.com/apezord/ord-junkcoin"
+repository = "https://github.com/apezord/ord-junkcoin"
 autobins = false
 rust-version = "1.67"
 

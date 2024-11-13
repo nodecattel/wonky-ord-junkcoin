@@ -7,13 +7,13 @@ use {
   std::collections::HashMap,
 };
 
-use crate::drc20::errors::Error::LedgerError;
-use crate::drc20::operation::{InscriptionOp, Operation};
-use crate::drc20::params::{BIGDECIMAL_TEN, MAX_DECIMAL_WIDTH};
-use crate::drc20::script_key::ScriptKey;
-use crate::drc20::{
+use crate::jkc20::errors::Error::LedgerError;
+use crate::jkc20::operation::{InscriptionOp, Operation};
+use crate::jkc20::params::{BIGDECIMAL_TEN, MAX_DECIMAL_WIDTH};
+use crate::jkc20::script_key::ScriptKey;
+use crate::jkc20::{
   max_script_tick_id_key, max_script_tick_key, min_script_tick_id_key, min_script_tick_key,
-  script_tick_id_key, script_tick_key, Balance, BlockContext, DRC20Error, Deploy, DeployEvent,
+  script_tick_id_key, script_tick_key, Balance, BlockContext, JKC20Error, Deploy, DeployEvent,
   Event, InscribeTransferEvent, Message, Mint, MintEvent, Num, Tick, TokenInfo, Transfer,
   TransferEvent, TransferInfo, TransferableLog,
 };
@@ -32,31 +32,31 @@ pub struct ExecutionMessage {
 }
 
 pub(super) struct Drc20Updater<'a, 'db, 'tx> {
-    drc20_token_info: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
-    drc20_token_holder: &'a mut MultimapTable<'db, 'tx, &'static str, &'static str>,
-    drc20_token_balance: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
-    drc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static [u8; 36], &'static [u8]>,
-    drc20_transferable_log: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
+    jkc20_token_info: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
+    jkc20_token_holder: &'a mut MultimapTable<'db, 'tx, &'static str, &'static str>,
+    jkc20_token_balance: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
+    jkc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static [u8; 36], &'static [u8]>,
+    jkc20_transferable_log: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
     inscription_id_to_inscription_entry: &'a Table<'db, 'tx, &'static InscriptionIdValue, InscriptionEntryValue>,
     transaction_id_to_transaction: &'a mut Table<'db, 'tx, &'static TxidValue, &'static [u8]>,
 }
 
 impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     pub(super) fn new(
-        drc20_token_info: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
-        drc20_token_holder: &'a mut MultimapTable<'db, 'tx, &'static str, &'static str>,
-        drc20_token_balance: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
-        drc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static [u8; 36], &'static [u8]>,
-        drc20_transferable_log: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
+        jkc20_token_info: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
+        jkc20_token_holder: &'a mut MultimapTable<'db, 'tx, &'static str, &'static str>,
+        jkc20_token_balance: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
+        jkc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static [u8; 36], &'static [u8]>,
+        jkc20_transferable_log: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
         inscription_id_to_inscription_entry: &'a Table<'db, 'tx, &'static InscriptionIdValue, InscriptionEntryValue>,
         transaction_id_to_transaction: &'a mut Table<'db, 'tx, &'static TxidValue, &'static [u8]>,
     ) -> Result<Self> {
         Ok(Self {
-            drc20_token_info,
-            drc20_token_holder,
-            drc20_token_balance,
-            drc20_inscribe_transfer,
-            drc20_transferable_log,
+            jkc20_token_info,
+            jkc20_token_holder,
+            jkc20_token_balance,
+            jkc20_inscribe_transfer,
+            jkc20_transferable_log,
             inscription_id_to_inscription_entry,
             transaction_id_to_transaction,
         })
@@ -93,7 +93,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         }
 
         log::info!(
-      "DRC20 Updater indexed block {} with {} messages in {} ms",
+      "JKC20 Updater indexed block {} with {} messages in {} ms",
       context.blockheight,
       messages_size,
       (Instant::now() - start).as_millis(),
@@ -123,9 +123,9 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
                 }
                 let operation = operation_iter.next().unwrap();
 
-                // Parse DRC20 message through inscription operation.
+                // Parse JKC20 message through inscription operation.
                 if let Some(msg) =
-                    Message::resolve(&mut self.drc20_inscribe_transfer, &new_inscriptions, operation)?
+                    Message::resolve(&mut self.jkc20_inscribe_transfer, &new_inscriptions, operation)?
                 {
                     messages.push(msg);
                     continue;
@@ -181,14 +181,14 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     context: BlockContext,
     msg: &ExecutionMessage,
     deploy: Deploy,
-  ) -> Result<Event, errors::Error<DRC20Error>> {
+  ) -> Result<Event, errors::Error<JKC20Error>> {
     // ignore inscribe inscription to coinbase.
-    let to_script_key = msg.to.clone().ok_or(DRC20Error::InscribeToCoinbase)?;
+    let to_script_key = msg.to.clone().ok_or(JKC20Error::InscribeToCoinbase)?;
 
     let tick = deploy.tick.parse::<Tick>()?;
 
     if let Some(stored_tick_info) = Self::get_token_info(self, &tick).map_err(|e| LedgerError(e))? {
-      return Err(errors::Error::DRC20Error(DRC20Error::DuplicateTick(
+      return Err(errors::Error::JKC20Error(JKC20Error::DuplicateTick(
         stored_tick_info.tick.to_string(),
       )));
     }
@@ -196,22 +196,22 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     let dec = Num::from_str(&deploy.decimals.map_or(MAX_DECIMAL_WIDTH.to_string(), |v| v))?
       .checked_to_u8()?;
     if dec > MAX_DECIMAL_WIDTH {
-      return Err(errors::Error::DRC20Error(DRC20Error::DecimalsTooLarge(dec)));
+      return Err(errors::Error::JKC20Error(JKC20Error::DecimalsTooLarge(dec)));
     }
     let base = BIGDECIMAL_TEN.checked_powu(u64::from(dec))?;
 
     let supply = Num::from_str(&deploy.max_supply)?;
 
-    if supply.sign() == Sign::NoSign || supply > drc20::params::MAXIMUM_SUPPLY.to_owned() {
-      return Err(errors::Error::DRC20Error(DRC20Error::InvalidSupply(
+    if supply.sign() == Sign::NoSign || supply > jkc20::params::MAXIMUM_SUPPLY.to_owned() {
+      return Err(errors::Error::JKC20Error(JKC20Error::InvalidSupply(
         supply.to_string(),
       )));
     }
 
     let limit = Num::from_str(&deploy.mint_limit.map_or(deploy.max_supply, |v| v))?;
 
-    if limit.sign() == Sign::NoSign || limit > drc20::params::MAXIMUM_SUPPLY.to_owned() {
-      return Err(errors::Error::DRC20Error(DRC20Error::MintLimitOutOfRange(
+    if limit.sign() == Sign::NoSign || limit > jkc20::params::MAXIMUM_SUPPLY.to_owned() {
+      return Err(errors::Error::JKC20Error(JKC20Error::MintLimitOutOfRange(
         tick.to_lowercase().to_string(),
         limit.to_string(),
       )));
@@ -251,32 +251,32 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     context: BlockContext,
     msg: &ExecutionMessage,
     mint: Mint,
-  ) -> Result<Event, errors::Error<DRC20Error>> {
+  ) -> Result<Event, errors::Error<JKC20Error>> {
     // ignore inscribe inscription to coinbase.
-    let to_script_key = msg.to.clone().ok_or(DRC20Error::InscribeToCoinbase)?;
+    let to_script_key = msg.to.clone().ok_or(JKC20Error::InscribeToCoinbase)?;
 
     let tick = mint.tick.parse::<Tick>()?;
 
     let token_info = Self::get_token_info(self, &tick)
       .map_err(|e| LedgerError(e))?
-      .ok_or(DRC20Error::TickNotFound(tick.to_string()))?;
+      .ok_or(JKC20Error::TickNotFound(tick.to_string()))?;
 
     let base = BIGDECIMAL_TEN.checked_powu(u64::from(token_info.decimal))?;
 
     let mut amt = Num::from_str(&mint.amount)?;
 
     if amt.scale() > i64::from(token_info.decimal) {
-      return Err(errors::Error::DRC20Error(DRC20Error::AmountOverflow(
+      return Err(errors::Error::JKC20Error(JKC20Error::AmountOverflow(
         amt.to_string(),
       )));
     }
 
     amt = amt.checked_mul(&base)?;
     if amt.sign() == Sign::NoSign {
-      return Err(errors::Error::DRC20Error(DRC20Error::InvalidZeroAmount));
+      return Err(errors::Error::JKC20Error(JKC20Error::InvalidZeroAmount));
     }
     if amt > Into::<Num>::into(token_info.limit_per_mint) {
-      return Err(errors::Error::DRC20Error(DRC20Error::AmountExceedLimit(
+      return Err(errors::Error::JKC20Error(JKC20Error::AmountExceedLimit(
         amt.to_string(),
       )));
     }
@@ -284,7 +284,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     let supply = Into::<Num>::into(token_info.supply);
 
     if minted >= supply {
-      return Err(errors::Error::DRC20Error(DRC20Error::TickMinted(
+      return Err(errors::Error::JKC20Error(JKC20Error::TickMinted(
         token_info.tick.to_string(),
       )));
     }
@@ -336,29 +336,29 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     _context: BlockContext,
     msg: &ExecutionMessage,
     transfer: Transfer,
-  ) -> Result<Event, errors::Error<DRC20Error>> {
+  ) -> Result<Event, errors::Error<JKC20Error>> {
     // ignore inscribe inscription to coinbase.
-    let to_script_key = msg.to.clone().ok_or(DRC20Error::InscribeToCoinbase)?;
+    let to_script_key = msg.to.clone().ok_or(JKC20Error::InscribeToCoinbase)?;
 
     let tick = transfer.tick.parse::<Tick>()?;
 
     let token_info = Self::get_token_info(self, &tick)
       .map_err(|e| LedgerError(e))?
-      .ok_or(DRC20Error::TickNotFound(tick.to_string()))?;
+      .ok_or(JKC20Error::TickNotFound(tick.to_string()))?;
 
     let base = BIGDECIMAL_TEN.checked_powu(u64::from(token_info.decimal))?;
 
     let mut amt = Num::from_str(&transfer.amount)?;
 
     if amt.scale() > i64::from(token_info.decimal) {
-      return Err(errors::Error::DRC20Error(DRC20Error::AmountOverflow(
+      return Err(errors::Error::JKC20Error(JKC20Error::AmountOverflow(
         amt.to_string(),
       )));
     }
 
     amt = amt.checked_mul(&base)?;
     if amt.sign() == Sign::NoSign || amt > Into::<Num>::into(token_info.supply) {
-      return Err(errors::Error::DRC20Error(DRC20Error::AmountOverflow(
+      return Err(errors::Error::JKC20Error(JKC20Error::AmountOverflow(
         amt.to_string(),
       )));
     }
@@ -371,7 +371,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     let transferable = Into::<Num>::into(balance.transferable_balance);
     let available = overall.checked_sub(&transferable)?;
     if available < amt {
-      return Err(errors::Error::DRC20Error(DRC20Error::InsufficientBalance(
+      return Err(errors::Error::JKC20Error(JKC20Error::InsufficientBalance(
         available.to_string(),
         amt.to_string(),
       )));
@@ -415,15 +415,15 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     &mut self,
     _context: BlockContext,
     msg: &ExecutionMessage,
-  ) -> Result<Event, errors::Error<DRC20Error>> {
+  ) -> Result<Event, errors::Error<JKC20Error>> {
     let mut transferable = Self::get_transferable_by_id(self, &msg.from, &msg.inscription_id)
       .map_err(|e| LedgerError(e))?
-      .ok_or(DRC20Error::TransferableNotFound(msg.inscription_id))?;
+      .ok_or(JKC20Error::TransferableNotFound(msg.inscription_id))?;
     let amt = Into::<Num>::into(transferable.amount);
 
     if transferable.owner != msg.from {
-      return Err(errors::Error::DRC20Error(
-        DRC20Error::TransferableOwnerNotMatch(msg.inscription_id),
+      return Err(errors::Error::JKC20Error(
+        JKC20Error::TransferableOwnerNotMatch(msg.inscription_id),
       ));
     }
 
@@ -431,7 +431,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
 
     let token_info = Self::get_token_info(self, &tick)
       .map_err(|e| LedgerError(e))?
-      .ok_or(DRC20Error::TickNotFound(tick.to_string()))?;
+      .ok_or(JKC20Error::TickNotFound(tick.to_string()))?;
 
     // update from key balance.
     let mut from_balance = Self::get_balance(self, &msg.from, &tick)
@@ -498,7 +498,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         tick: &Tick,
         inscription: TransferableLog,
     ) -> Result<(), redb::Error> {
-        self.drc20_transferable_log.insert(
+        self.jkc20_transferable_log.insert(
             script_tick_id_key(script, tick, &inscription.inscription_id).as_str(),
             rmp_serde::to_vec(&inscription).unwrap().as_slice(),
         )?;
@@ -512,7 +512,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         inscription_id: InscriptionId,
     ) -> Result<(), redb::Error> {
         self
-            .drc20_transferable_log
+            .jkc20_transferable_log
             .remove(script_tick_id_key(script, tick, &inscription_id).as_str())?;
         Ok(())
     }
@@ -522,7 +522,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         script: &ScriptKey
     ) -> Result<Vec<TransferableLog>, redb::Error> {
         Ok(
-            self.drc20_transferable_log
+            self.jkc20_transferable_log
                 .range(min_script_tick_key(script).as_str()..max_script_tick_key(script).as_str())?
                 .flat_map(|result| {
                     result.map(|(_, v)| rmp_serde::from_slice::<TransferableLog>(v.value()).unwrap())
@@ -537,7 +537,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         tick: &Tick,
     ) -> Result<Vec<TransferableLog>, redb::Error> {
         Ok(
-            self.drc20_transferable_log
+            self.jkc20_transferable_log
                 .range(
                     min_script_tick_id_key(script, tick).as_str()
                         ..max_script_tick_id_key(script, tick).as_str(),
@@ -567,7 +567,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         inscription_id: InscriptionId,
         transfer_info: TransferInfo,
     ) -> Result<(), redb::Error> {
-        self.drc20_inscribe_transfer.insert(
+        self.jkc20_inscribe_transfer.insert(
             &inscription_id.store(),
             rmp_serde::to_vec(&transfer_info).unwrap().as_slice(),
         )?;
@@ -578,7 +578,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         &mut self,
         inscription_id: InscriptionId,
     ) -> Result<(), redb::Error> {
-        self.drc20_inscribe_transfer
+        self.jkc20_inscribe_transfer
             .remove(&inscription_id.store())?;
         Ok(())
     }
@@ -588,7 +588,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         script_key: &ScriptKey,
         new_balance: Balance,
     ) -> Result<(), redb::Error> {
-        self.drc20_token_balance.insert(
+        self.jkc20_token_balance.insert(
             script_tick_key(script_key, &new_balance.tick).as_str(),
             bincode::serialize(&new_balance).unwrap().as_slice(),
         )?;
@@ -601,7 +601,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         tick: &Tick,
     ) -> Result<Option<Balance>, redb::Error> {
         Ok(
-            self.drc20_token_balance
+            self.jkc20_token_balance
                 .get(script_tick_key(script_key, tick).as_str())?
                 .map(|v| bincode::deserialize::<Balance>(v.value()).unwrap()),
         )
@@ -611,7 +611,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         tick: &Tick,
         new_info: &TokenInfo
     ) -> Result<(), redb::Error> {
-        self.drc20_token_info.insert(
+        self.jkc20_token_info.insert(
             tick.to_lowercase().hex().as_str(),
             bincode::serialize(new_info).unwrap().as_slice(),
         )?;
@@ -630,7 +630,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         info.minted = minted_amt;
         info.latest_mint_number = minted_block_number;
 
-        self.drc20_token_info.insert(
+        self.jkc20_token_info.insert(
             tick.to_lowercase().hex().as_str(),
             bincode::serialize(&info).unwrap().as_slice(),
         )?;
@@ -642,7 +642,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
         tick: &Tick
     ) -> Result <Option<TokenInfo>, redb::Error> {
         Ok(
-            self.drc20_token_info
+            self.jkc20_token_info
                 .get(tick.to_lowercase().hex().as_str())?
                 .map(|v| bincode::deserialize::<TokenInfo>(v.value()).unwrap()),
         )
@@ -691,7 +691,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     }
 
     fn remove_token_holder(&mut self, script_key: &ScriptKey, tick: Tick) -> std::result::Result<(), redb::Error> {
-        self.drc20_token_holder.remove(
+        self.jkc20_token_holder.remove(
             tick.to_lowercase().hex().as_str(),
             script_key.to_string().as_str(),
         )?;
@@ -699,7 +699,7 @@ impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
     }
 
     fn insert_token_holder(&mut self, script_key: &ScriptKey, tick: Tick) -> Result<(), redb::Error> {
-        self.drc20_token_holder.insert(
+        self.jkc20_token_holder.insert(
             tick.to_lowercase().hex().as_str(),
             script_key.to_string().as_str(),
         )?;

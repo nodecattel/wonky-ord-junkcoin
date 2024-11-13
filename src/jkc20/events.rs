@@ -2,7 +2,7 @@ use bitcoin::Txid;
 use super::*;
 use crate::{InscriptionId, SatPoint};
 use serde::{Deserialize, Serialize};
-use crate::drc20::script_key::ScriptKey;
+use crate::jkc20::script_key::ScriptKey;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum OperationType {
@@ -20,7 +20,7 @@ pub struct Receipt {
     pub op: OperationType,
     pub from: ScriptKey,
     pub to: ScriptKey,
-    pub result: Result<Event, DRC20Error>,
+    pub result: Result<Event, JKC20Error>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

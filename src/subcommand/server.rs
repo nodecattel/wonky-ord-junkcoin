@@ -9,7 +9,7 @@ use {
   },
   super::*,
   crate::{
-    drc20::{script_key::ScriptKey, Tick},
+    jkc20::{script_key::ScriptKey, Tick},
     page_config::PageConfig,
     templates::{
       AddressOutputJson, BlockHtml, BlockJson, DuneAddressJson, DuneBalance, DuneBalancesHtml,
@@ -17,7 +17,7 @@ use {
       InputHtml, InscriptionByAddressJson, InscriptionHtml, InscriptionJson, InscriptionsHtml,
       OutputHtml, OutputJson, PageContent, PageHtml, PreviewAudioHtml, PreviewImageHtml,
       PreviewModelHtml, PreviewPdfHtml, PreviewTextHtml, Operation, PreviewUnknownHtml, PreviewVideoHtml,
-      RangeHtml, RareTxt, SatHtml, JunkscriptionJson, TransactionHtml, Utxo, DRC20,
+      RangeHtml, RareTxt, SatHtml, JunkscriptionJson, TransactionHtml, Utxo, JKC20,
     },
   },
   axum::{
@@ -47,9 +47,9 @@ use {
     set_header::SetResponseHeaderLayer,
   },
 };
-use crate::drc20::operation::{deserialize_drc20_operation, Action};
-use crate::drc20::token_info::{ExtendedTokenInfo, HolderBalanceForTick, HoldersInfoForTick};
-use crate::templates::{DRC20Balance, DRC20Output, DRC20UtxoOutput};
+use crate::jkc20::operation::{deserialize_jkc20_operation, Action};
+use crate::jkc20::token_info::{ExtendedTokenInfo, HolderBalanceForTick, HoldersInfoForTick};
+use crate::templates::{JKC20Balance, JKC20Output, JKC20UtxoOutput};
 
 mod error;
 mod query;
@@ -337,15 +337,15 @@ impl Server {
           get(Self::inscriptions_by_address),
         )
         .route("/inscriptions/validate", get(Self::inscriptions_validate))
-        .route("/drc20/tick/:tick", get(Self::drc20_tick_info))
-        .route("/drc20/tick", get(Self::drc20_all_tick_info))
+        .route("/jkc20/tick/:tick", get(Self::jkc20_tick_info))
+        .route("/jkc20/tick", get(Self::jkc20_all_tick_info))
         .route(
-            "/drc20/balance/:address",
-            get(Self::drc20_by_address_unpaginated),
+            "/jkc20/balance/:address",
+            get(Self::jkc20_by_address_unpaginated),
         )
-        .route("/drc20/validate", get(Self::drc20_validate))
-        .route("/drc20/ticks", get(Self::drc20_all_ticks))
-        .route("/drc20/tick/holder/:tick", get(Self::drc20_tick_holder))
+        .route("/jkc20/validate", get(Self::jkc20_validate))
+        .route("/jkc20/ticks", get(Self::jkc20_all_ticks))
+        .route("/jkc20/tick/holder/:tick", get(Self::jkc20_tick_holder))
         .route("/dunes_on_outputs", get(Self::dunes_by_outputs))
         .route("/sat/:sat", get(Self::sat))
         .route("/search", get(Self::search_by_query))
@@ -711,23 +711,23 @@ impl Server {
     )
   }
 
-  async fn drc20_by_address(
+  async fn jkc20_by_address(
     Extension(index): Extension<Arc<Index>>,
     Path(params): Path<(String, u32)>,
     Query(query): Query<Drc20BalanceQuery>,
   ) -> ServerResult<Response> {
-    Self::get_drc20_by_address(index, params.0, Some(params.1), query).await
+    Self::get_jkc20_by_address(index, params.0, Some(params.1), query).await
   }
 
-  async fn drc20_by_address_unpaginated(
+  async fn jkc20_by_address_unpaginated(
     Extension(index): Extension<Arc<Index>>,
     Path(params): Path<String>,
     Query(query): Query<Drc20BalanceQuery>,
   ) -> ServerResult<Response> {
-    Self::get_drc20_by_address(index, params, None, query).await
+    Self::get_jkc20_by_address(index, params, None, query).await
   }
 
-  async fn get_drc20_by_address(
+  async fn get_jkc20_by_address(
     index: Arc<Index>,
     address: String,
     page: Option<u32>,
@@ -740,7 +740,7 @@ impl Server {
       let value_filter = query.value_filter.unwrap_or(0);
       let show_utxos = query.show_utxos.unwrap_or(true);
 
-      let mut drc20_utxos: Vec<(DRC20, Utxo, InscriptionId, u64, u64, bool)> = Vec::new();
+      let mut jkc20_utxos: Vec<(JKC20, Utxo, InscriptionId, u64, u64, bool)> = Vec::new();
 
       if show_utxos {
         let outpoints: Vec<OutPoint> = index.get_account_outputs(address.clone())?;
@@ -781,10 +781,10 @@ impl Server {
             };
 
             if let Some(content) = str_content {
-              let drc20 = DRC20::from_json_string(content.as_str());
-              if let Some(drc20) = drc20 {
+              let jkc20 = JKC20::from_json_string(content.as_str());
+              if let Some(jkc20) = jkc20 {
                 if let Some(filter) = query.tick.clone() {
-                  if filter != drc20.clone().tick.unwrap_or_default() {
+                  if filter != jkc20.clone().tick.unwrap_or_default() {
                     continue;
                   }
                 }
@@ -804,7 +804,7 @@ impl Server {
                   continue;
                 }
 
-                if let Some(ref op) = drc20.op {
+                if let Some(ref op) = jkc20.op {
                   if *op == Operation::Transfer {
                     inscription_ids_to_check.push(inscription_id);
                   }
@@ -817,8 +817,8 @@ impl Server {
                     None
                   };
 
-                drc20_utxos.push((
-                  drc20.clone(),
+                jkc20_utxos.push((
+                  jkc20.clone(),
                   Utxo {
                     txid,
                     vout,
@@ -837,7 +837,7 @@ impl Server {
         }
         if !inscription_ids_to_check.is_empty() {
           let transferable_logs = index
-            .get_drc20_transferable_by_id(
+            .get_jkc20_transferable_by_id(
               &ScriptKey::from_address(address_from_str.clone(), index.get_network()?),
               &inscription_ids_to_check,
             )
@@ -846,8 +846,8 @@ impl Server {
           for (inscription_id, log) in transferable_logs {
             result_map.insert(inscription_id, log.is_some());
           }
-          for (drc20, _, id, _, _, ref mut valid) in &mut drc20_utxos {
-            if let Some(ref op) = drc20.op {
+          for (jkc20, _, id, _, _, ref mut valid) in &mut jkc20_utxos {
+            if let Some(ref op) = jkc20.op {
               if *op == Operation::Transfer {
                 if let Some(&result) = result_map.get(id) {
                   *valid = result;
@@ -863,10 +863,10 @@ impl Server {
       let mut start_index = if page == 0 { 0 } else { (page - 1) * items_per_page };
       let mut element_counter = 0;*/
 
-      let mut drc20balances: Vec<DRC20Balance> = Vec::new();
+      let mut jkc20balances: Vec<JKC20Balance> = Vec::new();
 
       let balance = index
-        .get_drc20_balances(&ScriptKey::from_address(
+        .get_jkc20_balances(&ScriptKey::from_address(
           address_from_str,
           index.get_network()?,
         ))
@@ -883,15 +883,15 @@ impl Server {
           if entry.overall_balance == 0 {
             continue;
           }
-          let utxos: Vec<DRC20Output> = drc20_utxos
+          let utxos: Vec<JKC20Output> = jkc20_utxos
             .iter()
             .filter(|(d20, _, _, _, _, _)| d20.clone().tick.unwrap_or_default() == tick)
             .map(|(d20, utxo, id, number, offset, valid)| {
               let balance = d20.clone().amt.unwrap_or("0".to_string());
               let op = d20.clone().op.unwrap_or(Operation::Unknown);
-              DRC20Output {
+              JKC20Output {
                 utxo: utxo.clone(),
-                drc20: DRC20UtxoOutput {
+                jkc20: JKC20UtxoOutput {
                   balance,
                   operation: op,
                   valid: *valid,
@@ -902,22 +902,22 @@ impl Server {
               }
             })
             .collect();
-          let token_info = index.get_drc20_token_info(&entry.tick.clone())?;
+          let token_info = index.get_jkc20_token_info(&entry.tick.clone())?;
           let token_info_clone = token_info.clone().unwrap();
           let decimals = token_info_clone.decimal;
           let overall_balance = entry.overall_balance;
           let transferable_balance = entry.transferable_balance;
-          if let Some(drc20_balance) = DRC20Balance::from_strings(
+          if let Some(jkc20_balance) = JKC20Balance::from_strings(
             tick.as_str(),
             format_balance(entry.transferable_balance, decimals).as_str(),
             format_balance(entry.overall_balance - entry.transferable_balance, decimals).as_str(),
             utxos,
           ) {
-            drc20balances.push(drc20_balance);
+            jkc20balances.push(jkc20_balance);
           }
         }
       }
-      Ok(Json(json!({"drc20": drc20balances})).into_response())
+      Ok(Json(json!({"jkc20": jkc20balances})).into_response())
     })
   }
 
@@ -1019,8 +1019,8 @@ impl Server {
         };
 
         if let Some(content) = str_content.clone() {
-          let drc20 = DRC20::from_json_string(content.as_str());
-          if drc20.is_some() {
+          let jkc20 = JKC20::from_json_string(content.as_str());
+          if jkc20.is_some() {
             element_counter = element_counter.checked_sub(1).unwrap_or(0);
             continue;
           }
@@ -1265,23 +1265,23 @@ impl Server {
     Ok(outputs_json)
   }
 
-  async fn drc20_tick_info(
+  async fn jkc20_tick_info(
     Extension(index): Extension<Arc<Index>>,
     Path(tick): Path<String>,
     Query(query): Query<Drc20TickInfoQuery>,
   ) -> Result<Response, ServerError> {
     let tick =
       &Tick::from_str(tick.as_str()).map_err(|err| ServerError::BadRequest(err.to_string()))?;
-    let token_info = index.get_drc20_token_info(&tick.clone())?;
+    let token_info = index.get_jkc20_token_info(&tick.clone())?;
 
     if query.show_holder.unwrap_or(false) {
-      let holder = index.get_drc20_token_holder(&tick.clone())?;
+      let holder = index.get_jkc20_token_holder(&tick.clone())?;
 
       let mut holder_to_balance: HashMap<String, HolderBalanceForTick> = HashMap::new();
 
       for script_key in holder.clone() {
         if let Some(balance) = index
-          .get_drc20_balance(&script_key, &tick)
+          .get_jkc20_balance(&script_key, &tick)
           .map_err(|err| ServerError::BadRequest(err.to_string()))?
         {
           let token_info_clone = token_info.clone().unwrap();
@@ -1320,20 +1320,20 @@ impl Server {
     }
   }
 
-  async fn drc20_tick_holder(
+  async fn jkc20_tick_holder(
     Extension(index): Extension<Arc<Index>>,
     Path(tick): Path<String>,
   ) -> Result<Response, ServerError> {
     let tick =
       &Tick::from_str(tick.as_str()).map_err(|err| ServerError::BadRequest(err.to_string()))?;
-    let holder = index.get_drc20_token_holder(&tick.clone())?;
-    let token_info = index.get_drc20_token_info(&tick.clone())?;
+    let holder = index.get_jkc20_token_holder(&tick.clone())?;
+    let token_info = index.get_jkc20_token_info(&tick.clone())?;
 
     let mut holder_to_balance: HashMap<String, HolderBalanceForTick> = HashMap::new();
 
     for script_key in holder.clone() {
       if let Some(balance) = index
-        .get_drc20_balance(&script_key, &tick)
+        .get_jkc20_balance(&script_key, &tick)
         .map_err(|err| ServerError::BadRequest(err.to_string()))
         .unwrap_or(None)
       {
@@ -1369,12 +1369,12 @@ impl Server {
     }
   }
 
-  async fn drc20_all_tick_info(
+  async fn jkc20_all_tick_info(
     Extension(index): Extension<Arc<Index>>,
     Query(query): Query<Drc20TickInfoQuery>,
   ) -> Result<Response, ServerError> {
     let token_info = index
-      .get_drc20_tokens_info()
+      .get_jkc20_tokens_info()
       .map_err(|err| ServerError::BadRequest(err.to_string()))?;
 
     if query.show_holder.unwrap_or(false) {
@@ -1383,14 +1383,14 @@ impl Server {
         .map(|info| {
           let tick = info.tick.clone();
           let holder = index
-            .get_drc20_token_holder(&tick.clone())
+            .get_jkc20_token_holder(&tick.clone())
             .unwrap_or(Vec::new());
 
           let mut holder_to_balance: HashMap<String, HolderBalanceForTick> = HashMap::new();
 
           for script_key in holder.clone() {
             if let Some(balance) = index
-              .get_drc20_balance(&script_key, &tick)
+              .get_jkc20_balance(&script_key, &tick)
               .map_err(|err| ServerError::BadRequest(err.to_string()))
               .unwrap_or(None)
             {
@@ -1429,11 +1429,11 @@ impl Server {
     }
   }
 
-  async fn drc20_all_ticks(
+  async fn jkc20_all_ticks(
     Extension(index): Extension<Arc<Index>>,
   ) -> Result<Response, ServerError> {
     let token_info: Vec<Tick> = index
-      .get_drc20_tokens_info()
+      .get_jkc20_tokens_info()
       .map_err(|err| ServerError::BadRequest(err.to_string()))?
       .iter()
       .map(|info| info.tick.clone())
@@ -1442,7 +1442,7 @@ impl Server {
     Ok(Json(token_info).into_response())
   }
 
-  async fn drc20_validate(
+  async fn jkc20_validate(
     Extension(index): Extension<Arc<Index>>,
     Extension(server_config): Extension<Arc<PageConfig>>,
     Query(query): Query<ValidityQuery>,
@@ -1497,7 +1497,7 @@ impl Server {
     for (address, inscription_ids) in address_map {
       // Call the function with the list of inscription IDs
       let transferable_logs = index
-        .get_drc20_transferable_by_id(
+        .get_jkc20_transferable_by_id(
           &ScriptKey::from_address(address.clone(), index.get_network()?),
           &inscription_ids,
         )
@@ -1669,7 +1669,7 @@ impl Server {
   }
 
   async fn install_script() -> Redirect {
-    Redirect::to("https://raw.githubusercontent.com/apezord/ord-dogecoin/master/install.sh")
+    Redirect::to("https://raw.githubusercontent.com/apezord/ord-junkcoin/master/install.sh")
   }
 
   async fn block(
@@ -2843,7 +2843,7 @@ mod tests {
   use crate::dunes::{Dunestone, Edict, Etching};
 
   struct TestServer {
-    dogecoin_rpc_server: test_bitcoincore_rpc::Handle,
+    junkcoin_rpc_server: test_bitcoincore_rpc::Handle,
     index: Arc<Index>,
     ord_server_handle: Handle,
     url: Url,
@@ -2864,15 +2864,15 @@ mod tests {
       Self::new_server(test_bitcoincore_rpc::spawn(), None, ord_args, server_args)
     }
 
-    fn new_with_dogecoin_rpc_server_and_config(
-      dogecoin_rpc_server: test_bitcoincore_rpc::Handle,
+    fn new_with_junkcoin_rpc_server_and_config(
+      junkcoin_rpc_server: test_bitcoincore_rpc::Handle,
       config: String,
     ) -> Self {
-      Self::new_server(dogecoin_rpc_server, Some(config), &[], &[])
+      Self::new_server(junkcoin_rpc_server, Some(config), &[], &[])
     }
 
     fn new_server(
-      dogecoin_rpc_server: test_bitcoincore_rpc::Handle,
+      junkcoin_rpc_server: test_bitcoincore_rpc::Handle,
       config: Option<String>,
       ord_args: &[&str],
       server_args: &[&str],
@@ -2902,7 +2902,7 @@ mod tests {
 
       let (options, server) = parse_server_args(&format!(
         "ord --chain regtest --rpc-url {} --cookie-file {} --data-dir {} {config_args} {} server --http-port {} --address 127.0.0.1 {}",
-        dogecoin_rpc_server.url(),
+        junkcoin_rpc_server.url(),
         cookiefile.to_str().unwrap(),
         tempdir.path().to_str().unwrap(),
         ord_args.join(" "),
@@ -2942,7 +2942,7 @@ mod tests {
       }
 
       Self {
-        dogecoin_rpc_server,
+        junkcoin_rpc_server,
         index,
         ord_server_handle,
         tempdir,
@@ -3011,14 +3011,14 @@ mod tests {
     }
 
     fn mine_blocks(&self, n: u64) -> Vec<bitcoin::Block> {
-      let blocks = self.dogecoin_rpc_server.mine_blocks(n);
+      let blocks = self.junkcoin_rpc_server.mine_blocks(n);
       self.index.update().unwrap();
       blocks
     }
 
     fn mine_blocks_with_subsidy(&self, n: u64, subsidy: u64) -> Vec<Block> {
       let blocks = self
-        .dogecoin_rpc_server
+        .junkcoin_rpc_server
         .mine_blocks_with_subsidy(n, subsidy);
       self.index.update().unwrap();
       blocks
@@ -3208,7 +3208,7 @@ mod tests {
   fn install_sh_redirects_to_github() {
     TestServer::new().assert_redirect(
       "/install.sh",
-      "https://raw.githubusercontent.com/apezord/ord-dogecoin/master/install.sh",
+      "https://raw.githubusercontent.com/apezord/ord-junkcoin/master/install.sh",
     );
   }
 
@@ -3664,7 +3664,7 @@ mod tests {
       fee: 0,
       ..Default::default()
     };
-    test_server.dogecoin_rpc_server.broadcast_tx(transaction);
+    test_server.junkcoin_rpc_server.broadcast_tx(transaction);
     let block_hash = test_server.mine_blocks(1)[0].block_hash();
 
     test_server.assert_response_regex(
@@ -3901,7 +3901,7 @@ mod tests {
 
     server.mine_blocks(1);
     server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         outputs: 2,
@@ -3927,7 +3927,7 @@ mod tests {
 
     server.mine_blocks(1);
     server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         outputs: 2,
@@ -3980,7 +3980,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/plain;charset=utf-8", "hello").to_witness(),
@@ -4003,7 +4003,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/plain;charset=utf-8", b"\xc3\x28").to_witness(),
@@ -4025,7 +4025,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription(
@@ -4052,7 +4052,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("audio/flac", "hello").to_witness(),
@@ -4075,7 +4075,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("application/pdf", "hello").to_witness(),
@@ -4098,7 +4098,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("image/png", "hello").to_witness(),
@@ -4122,7 +4122,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/html;charset=utf-8", "hello").to_witness(),
@@ -4145,7 +4145,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/foo", "hello").to_witness(),
@@ -4168,7 +4168,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("video/webm", "hello").to_witness(),
@@ -4191,7 +4191,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/foo", "hello").to_witness(),
@@ -4213,7 +4213,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/foo", "hello").to_witness(),
@@ -4235,7 +4235,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/foo", "hello").to_witness(),
@@ -4269,7 +4269,7 @@ mod tests {
     server.mine_blocks(1);
 
     server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/foo", "hello").to_witness(),
@@ -4291,7 +4291,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: Inscription::new(Some("foo/bar".as_bytes().to_vec()), None).to_witness(),
@@ -4315,7 +4315,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: Inscription::new(Some("image/png".as_bytes().to_vec()), None).to_witness(),
@@ -4339,7 +4339,7 @@ mod tests {
     server.mine_blocks(1);
 
     let txid = server
-      .dogecoin_rpc_server
+      .junkcoin_rpc_server
       .broadcast_tx(TransactionTemplate {
         inputs: &[(1, 0, 0)],
         witness: inscription("text/foo", "hello").to_witness(),
@@ -4373,7 +4373,7 @@ mod tests {
     for i in 0..101 {
       server.mine_blocks(1);
       server
-        .dogecoin_rpc_server
+        .junkcoin_rpc_server
         .broadcast_tx(TransactionTemplate {
           inputs: &[(i + 1, 0, 0)],
           witness: inscription("text/foo", "hello").to_witness(),
@@ -4397,7 +4397,7 @@ mod tests {
     for i in 0..101 {
       server.mine_blocks(1);
       server
-        .dogecoin_rpc_server
+        .junkcoin_rpc_server
         .broadcast_tx(TransactionTemplate {
           inputs: &[(i + 1, 0, 0)],
           witness: inscription("text/foo", "hello").to_witness(),
@@ -4460,18 +4460,18 @@ mod tests {
 
   #[test]
   fn inscriptions_can_be_hidden_with_config() {
-    let dogecoin_rpc_server = test_bitcoincore_rpc::spawn();
-    dogecoin_rpc_server.mine_blocks(1);
-    let txid = dogecoin_rpc_server.broadcast_tx(TransactionTemplate {
+    let junkcoin_rpc_server = test_bitcoincore_rpc::spawn();
+    junkcoin_rpc_server.mine_blocks(1);
+    let txid = junkcoin_rpc_server.broadcast_tx(TransactionTemplate {
       inputs: &[(1, 0, 0)],
       witness: inscription("text/plain;charset=utf-8", "hello").to_witness(),
       ..Default::default()
     });
     let inscription = InscriptionId::from(txid);
-    dogecoin_rpc_server.mine_blocks(1);
+    junkcoin_rpc_server.mine_blocks(1);
 
-    let server = TestServer::new_with_dogecoin_rpc_server_and_config(
-      dogecoin_rpc_server,
+    let server = TestServer::new_with_junkcoin_rpc_server_and_config(
+      junkcoin_rpc_server,
       format!("\"hidden\":\n - {inscription}"),
     );
 

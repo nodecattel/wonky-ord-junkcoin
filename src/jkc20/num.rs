@@ -9,21 +9,21 @@ use bigdecimal::{
 };
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::drc20::params::MAX_DECIMAL_WIDTH;
+use crate::jkc20::params::MAX_DECIMAL_WIDTH;
 
-use super::DRC20Error;
+use super::JKC20Error;
 
 #[derive(PartialEq, PartialOrd, Debug, Clone)]
 pub struct Num(BigDecimal);
 
 impl Num {
-  pub fn checked_add(&self, other: &Num) -> Result<Self, DRC20Error> {
+  pub fn checked_add(&self, other: &Num) -> Result<Self, JKC20Error> {
     Ok(Self(self.0.clone() + &other.0))
   }
 
-  pub fn checked_sub(&self, other: &Num) -> Result<Self, DRC20Error> {
+  pub fn checked_sub(&self, other: &Num) -> Result<Self, JKC20Error> {
     if self.0 < other.0 {
-      return Err(DRC20Error::Overflow {
+      return Err(JKC20Error::Overflow {
         op: String::from("checked_sub"),
         org: self.clone().to_string(),
         other: other.clone().to_string(),
@@ -33,11 +33,11 @@ impl Num {
     Ok(Self(self.0.clone() - &other.0))
   }
 
-  pub fn checked_mul(&self, other: &Num) -> Result<Self, DRC20Error> {
+  pub fn checked_mul(&self, other: &Num) -> Result<Self, JKC20Error> {
     Ok(Self(self.0.clone() * &other.0))
   }
 
-  pub fn checked_powu(&self, exp: u64) -> Result<Self, DRC20Error> {
+  pub fn checked_powu(&self, exp: u64) -> Result<Self, JKC20Error> {
     match exp {
       0 => Ok(Self(BigDecimal::one())),
       1 => Ok(Self(self.0.clone())),
@@ -52,11 +52,11 @@ impl Num {
     }
   }
 
-  pub fn checked_to_u8(&self) -> Result<u8, DRC20Error> {
+  pub fn checked_to_u8(&self) -> Result<u8, JKC20Error> {
     if !self.0.is_integer() {
-      return Err(DRC20Error::InvalidInteger(self.clone().to_string()));
+      return Err(JKC20Error::InvalidInteger(self.clone().to_string()));
     }
-    self.0.clone().to_u8().ok_or(DRC20Error::Overflow {
+    self.0.clone().to_u8().ok_or(JKC20Error::Overflow {
       op: String::from("to_u8"),
       org: self.clone().to_string(),
       other: Self(BigDecimal::from(u8::MAX)).to_string(),
@@ -72,19 +72,19 @@ impl Num {
     scale
   }
 
-  pub fn checked_to_u128(&self) -> Result<u128, DRC20Error> {
+  pub fn checked_to_u128(&self) -> Result<u128, JKC20Error> {
     if !self.0.is_integer() {
-      return Err(DRC20Error::InvalidInteger(self.clone().to_string()));
+      return Err(JKC20Error::InvalidInteger(self.clone().to_string()));
     }
     self
       .0
       .to_bigint()
-      .ok_or(DRC20Error::InternalError(format!(
+      .ok_or(JKC20Error::InternalError(format!(
         "convert {} to bigint failed",
         self.0
       )))?
       .to_u128()
-      .ok_or(DRC20Error::Overflow {
+      .ok_or(JKC20Error::Overflow {
         op: String::from("to_u128"),
         org: self.clone().to_string(),
         other: Self(BigDecimal::from(BigInt::from(u128::MAX))).to_string(),
@@ -105,16 +105,16 @@ impl From<u128> for Num {
 }
 
 impl FromStr for Num {
-  type Err = DRC20Error;
+  type Err = JKC20Error;
   fn from_str(s: &str) -> Result<Self, Self::Err> {
     if s.starts_with('.') || s.ends_with('.') || s.find(['e', 'E', '+', '-']).is_some() {
-      return Err(DRC20Error::InvalidNum(s.to_string()));
+      return Err(JKC20Error::InvalidNum(s.to_string()));
     }
-    let num = BigDecimal::from_str(s).map_err(|_| DRC20Error::InvalidNum(s.to_string()))?;
+    let num = BigDecimal::from_str(s).map_err(|_| JKC20Error::InvalidNum(s.to_string()))?;
 
     let (_, scale) = num.as_bigint_and_exponent();
     if scale > i64::from(MAX_DECIMAL_WIDTH) {
-      return Err(DRC20Error::InvalidNum(s.to_string()));
+      return Err(JKC20Error::InvalidNum(s.to_string()));
     }
 
     Ok(Self(num))

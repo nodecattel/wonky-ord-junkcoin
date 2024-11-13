@@ -17,7 +17,7 @@ pub enum Operation {
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct DRC20 {
+pub(crate) struct JKC20 {
   pub p: Option<PType>,
   pub op: Option<Operation>,
   pub tick: Option<String>,
@@ -27,36 +27,36 @@ pub(crate) struct DRC20 {
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct DRC20Balance {
+pub(crate) struct JKC20Balance {
   tick: String,
   transferable: String,
   available: String,
-  utxos: Option<Vec<DRC20Output>>,
+  utxos: Option<Vec<JKC20Output>>,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct DRC20Output {
+pub(crate) struct JKC20Output {
   #[serde(flatten)]
   pub utxo: Utxo,
-  pub drc20: DRC20UtxoOutput,
+  pub jkc20: JKC20UtxoOutput,
   pub inscription_id: InscriptionId,
   pub inscription_number: u64,
   pub offset: u64,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct DRC20UtxoOutput {
+pub(crate) struct JKC20UtxoOutput {
   pub balance: String,
   pub operation: Operation,
   pub valid: bool,
 }
 
-impl DRC20Balance {
+impl JKC20Balance {
   pub fn from_strings(
     tick: &str,
     transferable: &str,
     available: &str,
-    utxos: Vec<DRC20Output>,
+    utxos: Vec<JKC20Output>,
   ) -> Option<Self> {
     Some(Self {
       tick: tick.to_string(),
@@ -67,12 +67,12 @@ impl DRC20Balance {
   }
 }
 
-impl DRC20 {
+impl JKC20 {
   pub fn from_json_string(json_str: &str) -> Option<Self> {
-    match serde_json::from_str::<DRC20>(json_str) {
-      Ok(drc20) => {
-        if drc20.is_valid() {
-          Some(drc20)
+    match serde_json::from_str::<JKC20>(json_str) {
+      Ok(jkc20) => {
+        if jkc20.is_valid() {
+          Some(jkc20)
         } else {
           None
         }

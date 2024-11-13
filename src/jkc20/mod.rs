@@ -15,7 +15,7 @@ mod num;
 mod transferable_log;
 
 pub use self::{
-    balance::Balance, errors::DRC20Error, events::*, tick::*, token_info::TokenInfo,
+    balance::Balance, errors::JKC20Error, events::*, tick::*, token_info::TokenInfo,
     transfer::TransferInfo,
     context::BlockContext, context::Message,
     num::Num, deploy::Deploy, mint::Mint, transfer::Transfer,

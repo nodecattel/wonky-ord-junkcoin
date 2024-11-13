@@ -26,8 +26,8 @@ use {
   url::Url,
 };
 
-use crate::drc20::{Balance, max_script_tick_key, min_script_tick_key, script_tick_key, Tick, TokenInfo, TransferableLog, min_script_tick_id_key, max_script_tick_id_key};
-use crate::drc20::script_key::ScriptKey;
+use crate::jkc20::{Balance, max_script_tick_key, min_script_tick_key, script_tick_key, Tick, TokenInfo, TransferableLog, min_script_tick_id_key, max_script_tick_id_key};
+use crate::jkc20::script_key::ScriptKey;
 use crate::sat::Sat;
 use crate::sat_point::SatPoint;
 use crate::templates::BlockHashAndConfirmations;
@@ -76,11 +76,11 @@ define_table! { STATISTIC_TO_COUNT, u64, u64 }
 define_table! { TRANSACTION_ID_TO_DUNE, &TxidValue, u128 }
 define_table! { TRANSACTION_ID_TO_TRANSACTION, &TxidValue, &[u8] }
 define_table! { WRITE_TRANSACTION_STARTING_BLOCK_COUNT_TO_TIMESTAMP, u32, u128 }
-define_table! { DRC20_BALANCES, &str, &[u8] }
-define_table! { DRC20_TOKEN, &str, &[u8] }
-define_table! { DRC20_INSCRIBE_TRANSFER, &InscriptionIdValue, &[u8] }
-define_table! { DRC20_TRANSFERABLELOG, &str, &[u8] }
-define_multimap_table! { DRC20_TOKEN_HOLDER, &str, &str}
+define_table! { JKC20_BALANCES, &str, &[u8] }
+define_table! { JKC20_TOKEN, &str, &[u8] }
+define_table! { JKC20_INSCRIBE_TRANSFER, &InscriptionIdValue, &[u8] }
+define_table! { JKC20_TRANSFERABLELOG, &str, &[u8] }
+define_multimap_table! { JKC20_TOKEN_HOLDER, &str, &str}
 
 pub(crate) struct Index {
   auth: Auth,
@@ -92,7 +92,7 @@ pub(crate) struct Index {
   genesis_block_coinbase_transaction: Transaction,
   genesis_block_coinbase_txid: Txid,
   height_limit: Option<u32>,
-  index_drc20: bool,
+  index_jkc20: bool,
   index_dunes: bool,
   index_sats: bool,
   index_transactions: bool,
@@ -195,13 +195,13 @@ impl Index {
       let password = url.password().map(|x| x.to_string()).unwrap_or_default();
 
       log::info!(
-        "Connecting to Dogecoin Core RPC server at {rpc_url} using credentials from the url"
+        "Connecting to Junkcoin Core RPC server at {rpc_url} using credentials from the url"
       );
 
       Auth::UserPass(username, password)
     } else {
       log::info!(
-        "Connecting to Dogecoin Core RPC server at {rpc_url} using credentials from `{}`",
+        "Connecting to Junkcoin Core RPC server at {rpc_url} using credentials from `{}`",
         cookie_file.display()
       );
 
@@ -222,7 +222,7 @@ impl Index {
       data_dir.join("index.redb")
     };
 
-    let index_drc20;
+    let index_jkc20;
     let index_dunes;
     let index_sats;
     let index_transactions;
@@ -268,7 +268,7 @@ impl Index {
             .unwrap()
             .value()
             != 0;
-          index_drc20 = statistics
+          index_jkc20 = statistics
             .get(&Statistic::IndexDrc20.key())?
             .unwrap()
             .value()
@@ -325,12 +325,12 @@ impl Index {
             outpoint_to_sat_ranges.insert(&OutPoint::null().store(), [].as_slice())?;
           }
 
-          index_drc20 = options.index_dunes();
+          index_jkc20 = options.index_dunes();
           index_dunes = options.index_dunes();
           index_sats = options.index_sats;
           index_transactions = options.index_transactions;
 
-          statistics.insert(&Statistic::IndexDrc20.key(), &u64::from(index_drc20))?;
+          statistics.insert(&Statistic::IndexDrc20.key(), &u64::from(index_jkc20))?;
 
           statistics.insert(&Statistic::IndexDunes.key(), &u64::from(index_dunes))?;
 
@@ -364,7 +364,7 @@ impl Index {
       first_dune_height: options.first_dune_height(),
       genesis_block_coinbase_transaction,
       height_limit: options.height_limit,
-      index_drc20,
+      index_jkc20,
       index_dunes,
       index_sats,
       index_transactions,
@@ -410,7 +410,7 @@ impl Index {
     for outpoint in utxos.keys() {
       if outpoint_to_value.get(&outpoint.store())?.is_none() {
         return Err(anyhow!(
-          "output in Dogecoin Core wallet but not in ord index: {outpoint}"
+          "output in Junkcoin Core wallet but not in ord index: {outpoint}"
         ));
       }
     }
@@ -888,14 +888,14 @@ impl Index {
     self.client.get_block(&hash).into_option()
   }
 
-  pub(crate) fn get_drc20_balances(&self, script_key: &ScriptKey) -> Result<Vec<Balance>> {
+  pub(crate) fn get_jkc20_balances(&self, script_key: &ScriptKey) -> Result<Vec<Balance>> {
     if self.block_count().unwrap() >= self.first_inscription_height {
       let rtx = self.database.begin_read()?;
 
-      let drc20_token_balance = rtx.open_table(DRC20_BALANCES)?;
+      let jkc20_token_balance = rtx.open_table(JKC20_BALANCES)?;
 
       return Ok(
-        drc20_token_balance
+        jkc20_token_balance
           .range(
             min_script_tick_key(script_key).as_str()..max_script_tick_key(script_key).as_str(),
           )?
@@ -909,7 +909,7 @@ impl Index {
     }
   }
 
-  pub(crate) fn get_drc20_balance(
+  pub(crate) fn get_jkc20_balance(
     &self,
     script_key: &ScriptKey,
     tick: &Tick,
@@ -917,10 +917,10 @@ impl Index {
     if self.block_count().unwrap() >= self.first_inscription_height {
       let rtx = self.database.begin_read()?;
 
-      let drc20_token_balance = rtx.open_table(DRC20_BALANCES)?;
+      let jkc20_token_balance = rtx.open_table(JKC20_BALANCES)?;
 
       return Ok(
-        drc20_token_balance
+        jkc20_token_balance
           .get(script_tick_key(script_key, tick).as_str())?
           .map(|v| bincode::deserialize::<Balance>(v.value()).unwrap()),
       );
@@ -929,13 +929,13 @@ impl Index {
     }
   }
 
-  pub(crate) fn get_drc20_token_info(&self, tick: &Tick) -> Result<Option<TokenInfo>> {
+  pub(crate) fn get_jkc20_token_info(&self, tick: &Tick) -> Result<Option<TokenInfo>> {
     if self.block_count().unwrap() >= self.first_inscription_height {
       let rtx = self.database.begin_read()?;
 
-      let drc20_token_info = rtx.open_table(DRC20_TOKEN)?;
+      let jkc20_token_info = rtx.open_table(JKC20_TOKEN)?;
       return Ok(
-        drc20_token_info
+        jkc20_token_info
           .get(tick.to_lowercase().hex().as_str())?
           .map(|v| bincode::deserialize::<TokenInfo>(v.value()).unwrap()),
       );
@@ -944,13 +944,13 @@ impl Index {
     }
   }
 
-  pub(crate) fn get_drc20_tokens_info(&self) -> Result<Vec<TokenInfo>> {
+  pub(crate) fn get_jkc20_tokens_info(&self) -> Result<Vec<TokenInfo>> {
     if self.block_count().unwrap() >= self.first_inscription_height {
       let rtx = self.database.begin_read()?;
 
-      let drc20_token_info = rtx.open_table(DRC20_TOKEN)?;
+      let jkc20_token_info = rtx.open_table(JKC20_TOKEN)?;
       return Ok(
-        drc20_token_info
+        jkc20_token_info
           .range::<&str>(..)?
           .flat_map(|result| {
             result.map(|(_, data)| bincode::deserialize::<TokenInfo>(data.value()).unwrap())
@@ -962,14 +962,14 @@ impl Index {
     }
   }
 
-  pub(crate) fn get_drc20_token_holder(&self, tick: &Tick) -> Result<Vec<ScriptKey>> {
+  pub(crate) fn get_jkc20_token_holder(&self, tick: &Tick) -> Result<Vec<ScriptKey>> {
     if self.block_count().unwrap() >= self.first_inscription_height {
       let rtx = self.database.begin_read()?;
 
-      let drc20_token_holder = rtx.open_multimap_table(DRC20_TOKEN_HOLDER)?;
+      let jkc20_token_holder = rtx.open_multimap_table(JKC20_TOKEN_HOLDER)?;
 
       return Ok(
-        drc20_token_holder
+        jkc20_token_holder
           .get(tick.to_lowercase().hex().as_str())?
           .flat_map(|result| {
             result.into_iter().filter_map(|(scriptKey)| {
@@ -983,14 +983,14 @@ impl Index {
     }
   }
 
-  pub(crate) fn get_drc20_transferable_by_range(
+  pub(crate) fn get_jkc20_transferable_by_range(
     &self,
     script: &ScriptKey,
   ) -> Result<Vec<TransferableLog>, redb::Error> {
     let rtx = self.database.begin_read()?;
-    let drc20_transferable_log = rtx.open_table(DRC20_TRANSFERABLELOG)?;
+    let jkc20_transferable_log = rtx.open_table(JKC20_TRANSFERABLELOG)?;
     let result = Ok(
-      drc20_transferable_log
+      jkc20_transferable_log
         .range(min_script_tick_key(script).as_str()..max_script_tick_key(script).as_str())?
         .flat_map(|result| {
           result.map(|(_, v)| rmp_serde::from_slice::<TransferableLog>(v.value()).unwrap())
@@ -1001,15 +1001,15 @@ impl Index {
     result
   }
 
-  pub(crate) fn get_drc20_transferable_by_tick(
+  pub(crate) fn get_jkc20_transferable_by_tick(
     &self,
     script: &ScriptKey,
     tick: &Tick,
   ) -> Result<Vec<TransferableLog>, redb::Error> {
     let rtx = self.database.begin_read()?;
-    let drc20_transferable_log = rtx.open_table(DRC20_TRANSFERABLELOG)?;
+    let jkc20_transferable_log = rtx.open_table(JKC20_TRANSFERABLELOG)?;
     let result = Ok(
-      drc20_transferable_log
+      jkc20_transferable_log
         .range(
           min_script_tick_id_key(script, tick).as_str()
             ..max_script_tick_id_key(script, tick).as_str(),
@@ -1023,7 +1023,7 @@ impl Index {
     result
   }
 
-  pub(crate) fn get_drc20_transferable_by_id(
+  pub(crate) fn get_jkc20_transferable_by_id(
     &self,
     script_key: &ScriptKey,
     inscription_ids: &[InscriptionId],
@@ -1031,9 +1031,9 @@ impl Index {
     if self.block_count().unwrap() >= self.first_inscription_height {
       let rtx = self.database.begin_read()?;
 
-      let drc20_transferable_log = rtx.open_table(DRC20_TRANSFERABLELOG)?;
+      let jkc20_transferable_log = rtx.open_table(JKC20_TRANSFERABLELOG)?;
 
-      let transferable_log_vec: Vec<TransferableLog> = drc20_transferable_log
+      let transferable_log_vec: Vec<TransferableLog> = jkc20_transferable_log
         .range(min_script_tick_key(script_key).as_str()..max_script_tick_key(script_key).as_str())?
         .flat_map(|result| {
           result.map(|(_, v)| rmp_serde::from_slice::<TransferableLog>(v.value()).unwrap())
@@ -2279,7 +2279,7 @@ mod tests {
 
   #[test]
   #[ignore]
-  fn missing_inputs_are_fetched_from_dogecoin_core() {
+  fn missing_inputs_are_fetched_from_junkcoin_core() {
     for args in [
       ["--first-inscription-height", "2"].as_slice(),
       ["--first-inscription-height", "2", "--index-sats"].as_slice(),
@@ -2938,7 +2938,7 @@ mod tests {
           .get_unspent_outputs(Wallet::load(&context.options).unwrap())
           .unwrap_err()
           .to_string(),
-        r"output in Dogecoin Core wallet but not in ord index: [[:xdigit:]]{64}:\d+"
+        r"output in Junkcoin Core wallet but not in ord index: [[:xdigit:]]{64}:\d+"
       );
     }
   }

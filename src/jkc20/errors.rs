@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::InscriptionId;
 
 #[derive(Debug, Clone, PartialEq, thiserror::Error, Deserialize, Serialize)]
-pub enum DRC20Error {
+pub enum JKC20Error {
   #[error("invalid number: {0}")]
   InvalidNum(String),
 
@@ -79,8 +79,8 @@ pub enum JSONError {
   #[error("invalid json string")]
   InvalidJson,
 
-  #[error("not drc20 json")]
-  NotDRC20Json,
+  #[error("not jkc20 json")]
+  NotJKC20Json,
 
   #[error("parse operation json error: {0}")]
   ParseOperationJsonError(String),
@@ -94,19 +94,19 @@ pub trait DataStore {
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, thiserror::Error)]
 pub enum Error<L: DataStore> {
-  #[error("drc20 error: {0}")]
-  DRC20Error(DRC20Error),
+  #[error("jkc20 error: {0}")]
+  JKC20Error(JKC20Error),
 
   #[error("ledger error: {0}")]
   LedgerError(L::Error),
 }
 
-impl DataStore for DRC20Error {
+impl DataStore for JKC20Error {
   type Error = redb::Error; // Replace with your actual error type
 }
 
-impl<L: DataStore> From<DRC20Error> for Error<L> {
-  fn from(e: DRC20Error) -> Self {
-    Self::DRC20Error(e)
+impl<L: DataStore> From<JKC20Error> for Error<L> {
+  fn from(e: JKC20Error) -> Self {
+    Self::JKC20Error(e)
   }
 }

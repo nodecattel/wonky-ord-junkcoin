@@ -33,7 +33,7 @@ impl Etch {
 
     let SpacedDune { dune, spacers } = self.dune;
 
-    let client = options.dogecoin_rpc_client_for_wallet_command(false)?;
+    let client = options.junkcoin_rpc_client_for_wallet_command(false)?;
 
     let count = client.get_block_count()?;
 

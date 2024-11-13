@@ -2,9 +2,9 @@ use anyhow::{anyhow, Result};
 use bitcoin::{Network, Txid};
 use redb::{ReadableTable, Table};
 
-use crate::drc20::operation::{Action, deserialize_drc20_operation, InscriptionOp, Operation};
-use crate::drc20::transfer::Transfer;
-use crate::drc20::TransferInfo;
+use crate::jkc20::operation::{Action, deserialize_jkc20_operation, InscriptionOp, Operation};
+use crate::jkc20::transfer::Transfer;
+use crate::jkc20::TransferInfo;
 use crate::index::entry::{Entry, InscriptionIdValue};
 use crate::inscription::Inscription;
 use crate::inscription_id::InscriptionId;
@@ -30,7 +30,7 @@ pub struct Message {
 
 impl Message {
   pub(crate) fn resolve<'a, 'db, 'tx>(
-    drc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, &'static [u8]>,
+    jkc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, &'static [u8]>,
     new_inscriptions: &[Inscription],
     op: &InscriptionOp,
   ) -> Result<Option<Message>> {
@@ -39,9 +39,9 @@ impl Message {
       .map(|satpoint| satpoint.outpoint.txid == op.txid)
       .unwrap_or(false);
 
-    let drc20_operation = match op.action {
+    let jkc20_operation = match op.action {
       Action::New { inscription: _ } if sat_in_outputs => {
-        match deserialize_drc20_operation(
+        match deserialize_jkc20_operation(
           new_inscriptions
             .get(usize::try_from(op.inscription_id.index).unwrap())
             .unwrap_or(&Inscription {
@@ -51,14 +51,14 @@ impl Message {
             }),
           &op.action,
         ) {
-          Ok(drc20_operation) => drc20_operation,
+          Ok(jkc20_operation) => jkc20_operation,
           _ => return Ok(None),
         }
       }
       // Transfered inscription operation.
-      // Attempt to retrieve the `InscribeTransfer` Inscription information from the data store of DRC20.
+      // Attempt to retrieve the `InscribeTransfer` Inscription information from the data store of JKC20.
       Action::Transfer => {
-        match get_inscribe_transfer_inscription(drc20_inscribe_transfer, op.inscription_id) {
+        match get_inscribe_transfer_inscription(jkc20_inscribe_transfer, op.inscription_id) {
           // Ignore non-first transfer operations.
           Ok(Some(transfer_info)) if op.inscription_id.txid == op.old_satpoint.outpoint.txid => {
             Operation::Transfer(Transfer {
@@ -82,18 +82,18 @@ impl Message {
       inscription_id: op.inscription_id,
       old_satpoint: op.old_satpoint,
       new_satpoint: op.new_satpoint,
-      op: drc20_operation,
+      op: jkc20_operation,
       sat_in_outputs,
     }))
   }
 }
 
 fn get_inscribe_transfer_inscription<'a, 'db, 'tx>(
-  drc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, &'static [u8]>,
+  jkc20_inscribe_transfer: &'a mut Table<'db, 'tx, &'static InscriptionIdValue, &'static [u8]>,
   inscription_id: InscriptionId,
 ) -> Result<Option<TransferInfo>, redb::Error> {
   Ok(
-    drc20_inscribe_transfer
+    jkc20_inscribe_transfer
       .get(&inscription_id.store())?
       .map(|v| rmp_serde::from_slice::<TransferInfo>(v.value()).unwrap()),
   )

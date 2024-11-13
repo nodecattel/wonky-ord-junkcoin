@@ -3,7 +3,7 @@ pub(crate) use {
   block::BlockHashAndConfirmations,
   block::BlockHtml,
   block::BlockJson,
-  drc20::{DRC20, DRC20Balance, DRC20Output, DRC20UtxoOutput, Operation},
+  jkc20::{JKC20, JKC20Balance, JKC20Output, JKC20UtxoOutput, Operation},
   dune::{
     DuneAddressJson, DuneBalance, DuneEntryJson, DuneHtml, DuneJson, DuneOutput, DuneOutputJson,
   },
@@ -30,7 +30,7 @@ pub(crate) use {
 };
 
 mod block;
-mod drc20;
+mod jkc20;
 mod dune;
 mod dune_balances;
 mod dunes;

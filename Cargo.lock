@@ -2498,7 +2498,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ord-dogecoin"
+name = "ord-junkcoin"
 version = "0.5.1"
 dependencies = [
  "anyhow",

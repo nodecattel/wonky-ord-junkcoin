@@ -6,12 +6,12 @@ use {
   serde::{Deserialize, Serialize},
 };
 
-use crate::drc20::deploy::Deploy;
-use crate::drc20::errors::JSONError;
-use crate::drc20::mint::Mint;
-use crate::drc20::OperationType;
-use crate::drc20::params::PROTOCOL_LITERAL;
-use crate::drc20::transfer::Transfer;
+use crate::jkc20::deploy::Deploy;
+use crate::jkc20::errors::JSONError;
+use crate::jkc20::mint::Mint;
+use crate::jkc20::OperationType;
+use crate::jkc20::params::PROTOCOL_LITERAL;
+use crate::jkc20::transfer::Transfer;
 
 // collect the inscription operation.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
@@ -61,13 +61,13 @@ enum RawOperation {
   Transfer(Transfer),
 }
 
-pub(crate) fn deserialize_drc20_operation(
+pub(crate) fn deserialize_jkc20_operation(
   inscription: &Inscription,
   action: &Action,
 ) -> anyhow::Result<Operation> {
   let content_body = std::str::from_utf8(inscription.body().ok_or(JSONError::InvalidJson)?)?;
   if content_body.len() < 40 {
-    return Err(JSONError::NotDRC20Json.into());
+    return Err(JSONError::NotJKC20Json.into());
   }
 
   let content_type = inscription
@@ -77,7 +77,7 @@ pub(crate) fn deserialize_drc20_operation(
   if !content_type.starts_with("text/plain") && !content_type.starts_with("application/json") {
     return Err(JSONError::UnSupportContentType.into());
   }
-  let raw_operation = match deserialize_drc20(content_body) {
+  let raw_operation = match deserialize_jkc20(content_body) {
     Ok(op) => op,
     Err(e) => {
       return Err(e.into());
@@ -92,16 +92,16 @@ pub(crate) fn deserialize_drc20_operation(
     },
     Action::Transfer => match raw_operation {
       RawOperation::Transfer(transfer) => Ok(Operation::Transfer(transfer)),
-      _ => Err(JSONError::NotDRC20Json.into()),
+      _ => Err(JSONError::NotJKC20Json.into()),
     },
   }
 }
 
-fn deserialize_drc20(s: &str) -> Result<RawOperation, JSONError> {
+fn deserialize_jkc20(s: &str) -> Result<RawOperation, JSONError> {
   let value: Value = serde_json::from_str(s).map_err(|_| JSONError::InvalidJson)?;
   let identifier = value.get("p");
   if identifier != Some(&json!(PROTOCOL_LITERAL)) {
-    return Err(JSONError::NotDRC20Json);
+    return Err(JSONError::NotJKC20Json);
   }
 
   serde_json::from_value(value).map_err(|e| JSONError::ParseOperationJsonError(e.to_string()))

@@ -10,11 +10,11 @@ touch ~/.hushlogin
 sed -i -E 's/#?PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
 
 mkdir -p \
-  /etc/systemd/system/dogecoind.service.d \
+  /etc/systemd/system/junkcoind.service.d \
   /etc/systemd/system/ord.service.d
 
 printf "[Service]\nEnvironment=CHAIN=%s\n" $CHAIN \
-  | tee /etc/systemd/system/dogecoind.service.d/override.conf \
+  | tee /etc/systemd/system/junkcoind.service.d/override.conf \
   > /etc/systemd/system/ord.service.d/override.conf
 
 hostnamectl set-hostname $DOMAIN
@@ -54,11 +54,11 @@ esac
 
 ufw --force enable
 
-if ! which dogecoind; then
-  ./bin/install-dogecoin-core-linux
+if ! which junkcoind; then
+  ./bin/install-junkcoin-core-linux
 fi
 
-dogecoind --version
+junkcoind --version
 
 if [[ ! -e ~/.cargo/env ]]; then
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -74,25 +74,25 @@ if [[ -f /usr/local/bin/ord ]]; then
 fi
 cp target/release/ord /usr/local/bin/ord
 
-id --user dogecoin || useradd --system dogecoin
+id --user junkcoin || useradd --system junkcoin
 id --user ord || useradd --system ord
 
-cp deploy/dogecoind.service /etc/systemd/system/
-mkdir -p /etc/dogecoin
-cp deploy/dogecoin.conf /etc/dogecoin/dogecoin.conf
+cp deploy/junkcoind.service /etc/systemd/system/
+mkdir -p /etc/junkcoin
+cp deploy/junkcoin.conf /etc/junkcoin/junkcoin.conf
 systemctl daemon-reload
-systemctl enable dogecoind
-systemctl restart dogecoind
+systemctl enable junkcoind
+systemctl restart junkcoind
 
 case $CHAIN in
   main)
-    COOKIE_FILE_DIR=/var/lib/dogecoind
+    COOKIE_FILE_DIR=/var/lib/junkcoind
     ;;
   signet)
-    COOKIE_FILE_DIR=/var/lib/dogecoind/signet
+    COOKIE_FILE_DIR=/var/lib/junkcoind/signet
     ;;
   test)
-    COOKIE_FILE_DIR=/var/lib/dogecoind/testnet3
+    COOKIE_FILE_DIR=/var/lib/junkcoind/testnet3
     ;;
   *)
     echo "Unknown chain: $CHAIN"
@@ -101,11 +101,11 @@ case $CHAIN in
 esac
 
 while [[ ! -f $COOKIE_FILE_DIR/.cookie ]]; do
-  echo "Waiting for dogecoind…"
+  echo "Waiting for junkcoind…"
   sleep 1
 done
 
-setfacl -m ord:x /var/lib/dogecoind
+setfacl -m ord:x /var/lib/junkcoind
 setfacl -m ord:x $COOKIE_FILE_DIR
 setfacl -dm ord:r $COOKIE_FILE_DIR
 setfacl -m ord:r $COOKIE_FILE_DIR/.cookie

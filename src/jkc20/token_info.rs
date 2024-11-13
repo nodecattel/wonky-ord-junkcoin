@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::drc20::script_key::ScriptKey;
+use crate::jkc20::script_key::ScriptKey;
 use crate::InscriptionId;
 
 use super::*;

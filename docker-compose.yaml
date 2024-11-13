@@ -1,6 +1,6 @@
 services:
   ord-indexer:
-    image: verydogelabs/wonky-ord-dogecoin
+    image: verydogelabs/wonky-ord-junkcoin
     env_file:
       - .env
     environment:
@@ -11,7 +11,7 @@ services:
       - FIRST_DUNE_HEIGHT=5084000
     tty: false
     restart: "always"
-    # for the indexer to be able to connect to the local dogecoin node we use the host network
+    # for the indexer to be able to connect to the local junkcoin node we use the host network
     network_mode: "host"
     #    ports:
     #      - ${ORD_HTTP_PORT:-8080}:80
@@ -24,13 +24,13 @@ services:
       "--first-dune-height=${FIRST_DUNE_HEIGHT}",
       "--index-dunes",
       "--index-transactions",
-      "--index-drc20",
+      "--index-jkc20",
       "server"
     ]
     volumes:
       - ${DOG_MOUNT_DIR_INDEXER:-/mnt/ord-node}/indexer-data-main:/root/.data:delegated
-      # If your dogecoin node is running in a container, you can mount the dogecoin data directory to the indexer container
-      # - dog-data:/root/.dogecoin
+      # If your junkcoin node is running in a container, you can mount the junkcoin data directory to the indexer container
+      # - dog-data:/root/.junkcoin
     logging:
       driver: "json-file"
       options:

@@ -48,7 +48,7 @@ use {
   chrono::{DateTime, TimeZone, Utc},
   clap::{ArgGroup, Parser},
   derive_more::{Display, FromStr},
-  drc20::{errors},
+  jkc20::{errors},
   html_escaper::{Escape, Trusted},
   lazy_static::lazy_static,
   regex::Regex,
@@ -124,7 +124,7 @@ mod outgoing;
 mod page_config;
 mod rarity;
 mod representation;
-mod drc20;
+mod jkc20;
 mod dunes;
 mod sat;
 mod sat_point;
