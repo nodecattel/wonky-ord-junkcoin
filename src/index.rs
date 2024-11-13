@@ -112,7 +112,7 @@ pub(crate) enum List {
 #[repr(u64)]
 pub(crate) enum Statistic {
   Commits,
-  IndexDrc20,
+  IndexJkc20,
   IndexDunes,
   IndexSats,
   LostSats,
@@ -269,7 +269,7 @@ impl Index {
             .value()
             != 0;
           index_jkc20 = statistics
-            .get(&Statistic::IndexDrc20.key())?
+            .get(&Statistic::IndexJkc20.key())?
             .unwrap()
             .value()
             != 0;
@@ -330,7 +330,7 @@ impl Index {
           index_sats = options.index_sats;
           index_transactions = options.index_transactions;
 
-          statistics.insert(&Statistic::IndexDrc20.key(), &u64::from(index_jkc20))?;
+          statistics.insert(&Statistic::IndexJkc20.key(), &u64::from(index_jkc20))?;
 
           statistics.insert(&Statistic::IndexDunes.key(), &u64::from(index_dunes))?;
 

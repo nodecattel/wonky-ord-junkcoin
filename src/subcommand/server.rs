@@ -125,12 +125,12 @@ struct UtxoBalanceQuery {
 }
 
 #[derive(Deserialize)]
-struct Drc20TickInfoQuery {
+struct Jkc20TickInfoQuery {
   show_holder: Option<bool>,
 }
 
 #[derive(Deserialize)]
-struct Drc20BalanceQuery {
+struct Jkc20BalanceQuery {
   show_all: Option<bool>,
   show_utxos: Option<bool>,
   tick: Option<String>,
@@ -714,7 +714,7 @@ impl Server {
   async fn jkc20_by_address(
     Extension(index): Extension<Arc<Index>>,
     Path(params): Path<(String, u32)>,
-    Query(query): Query<Drc20BalanceQuery>,
+    Query(query): Query<Jkc20BalanceQuery>,
   ) -> ServerResult<Response> {
     Self::get_jkc20_by_address(index, params.0, Some(params.1), query).await
   }
@@ -722,7 +722,7 @@ impl Server {
   async fn jkc20_by_address_unpaginated(
     Extension(index): Extension<Arc<Index>>,
     Path(params): Path<String>,
-    Query(query): Query<Drc20BalanceQuery>,
+    Query(query): Query<Jkc20BalanceQuery>,
   ) -> ServerResult<Response> {
     Self::get_jkc20_by_address(index, params, None, query).await
   }
@@ -731,7 +731,7 @@ impl Server {
     index: Arc<Index>,
     address: String,
     page: Option<u32>,
-    query: Drc20BalanceQuery,
+    query: Jkc20BalanceQuery,
   ) -> ServerResult<Response> {
     task::block_in_place(|| {
       let (address, page) = (address.clone(), page.unwrap_or(0));
@@ -1268,7 +1268,7 @@ impl Server {
   async fn jkc20_tick_info(
     Extension(index): Extension<Arc<Index>>,
     Path(tick): Path<String>,
-    Query(query): Query<Drc20TickInfoQuery>,
+    Query(query): Query<Jkc20TickInfoQuery>,
   ) -> Result<Response, ServerError> {
     let tick =
       &Tick::from_str(tick.as_str()).map_err(|err| ServerError::BadRequest(err.to_string()))?;
@@ -1371,7 +1371,7 @@ impl Server {
 
   async fn jkc20_all_tick_info(
     Extension(index): Extension<Arc<Index>>,
-    Query(query): Query<Drc20TickInfoQuery>,
+    Query(query): Query<Jkc20TickInfoQuery>,
   ) -> Result<Response, ServerError> {
     let token_info = index
       .get_jkc20_tokens_info()

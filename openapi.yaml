@@ -184,7 +184,7 @@ paths:
   /jkc20/balance/{address}:
     get:
       summary: Get JKC20 balance for an address
-      operationId: getDrc20Balance
+      operationId: getJkc20Balance
       parameters:
         - name: address
           in: path
@@ -226,7 +226,7 @@ paths:
   /jkc20/tick/{tick}:
     get:
       summary: Get JKC20 tick information
-      operationId: getDrc20TickInfo
+      operationId: getJkc20TickInfo
       parameters:
         - name: tick
           in: path
@@ -245,7 +245,7 @@ paths:
   /jkc20/tick:
     get:
       summary: Get all JKC20 tick information
-      operationId: getAllDrc20TickInfo
+      operationId: getAllJkc20TickInfo
       responses:
         '200':
           description: JKC20 tick information
@@ -259,7 +259,7 @@ paths:
   /jkc20/validate:
     get:
       summary: Validate JKC20 inscriptions
-      operationId: validateDrc20
+      operationId: validateJkc20
       parameters:
         - name: addresses
           in: query
@@ -515,7 +515,7 @@ paths:
   /jkc20/balance/{address}/{page}:
     get:
       summary: Get paginated JKC20 balance for an address
-      operationId: getDrc20BalancePaginated
+      operationId: getJkc20BalancePaginated
       parameters:
         - name: address
           in: path

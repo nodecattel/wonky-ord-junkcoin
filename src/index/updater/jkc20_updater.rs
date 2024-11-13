@@ -31,7 +31,7 @@ pub struct ExecutionMessage {
   pub(self) op: Operation,
 }
 
-pub(super) struct Drc20Updater<'a, 'db, 'tx> {
+pub(super) struct Jkc20Updater<'a, 'db, 'tx> {
     jkc20_token_info: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
     jkc20_token_holder: &'a mut MultimapTable<'db, 'tx, &'static str, &'static str>,
     jkc20_token_balance: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
@@ -41,7 +41,7 @@ pub(super) struct Drc20Updater<'a, 'db, 'tx> {
     transaction_id_to_transaction: &'a mut Table<'db, 'tx, &'static TxidValue, &'static [u8]>,
 }
 
-impl<'a, 'db, 'tx> Drc20Updater<'a, 'db, 'tx> {
+impl<'a, 'db, 'tx> Jkc20Updater<'a, 'db, 'tx> {
     pub(super) fn new(
         jkc20_token_info: &'a mut Table<'db, 'tx, &'static str, &'static [u8]>,
         jkc20_token_holder: &'a mut MultimapTable<'db, 'tx, &'static str, &'static str>,

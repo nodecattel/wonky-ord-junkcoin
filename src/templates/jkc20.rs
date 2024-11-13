@@ -4,7 +4,7 @@ use super::*;
 #[serde(rename_all = "snake_case")]
 pub enum PType {
   #[serde(rename = "jkc-20")]
-  Drc20,
+  Jkc20,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

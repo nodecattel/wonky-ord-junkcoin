@@ -9,7 +9,7 @@ use {
 };
 
 use crate::jkc20::BlockContext;
-use crate::index::updater::jkc20_updater::Drc20Updater;
+use crate::index::updater::jkc20_updater::Jkc20Updater;
 use crate::sat::Sat;
 use crate::sat_point::SatPoint;
 
@@ -539,7 +539,7 @@ impl<'index> Updater<'_> {
         let operations = inscription_updater.operations.clone();
 
         // Create a protocol manager to index the block of jkc20 data.
-        Drc20Updater::new(
+        Jkc20Updater::new(
           &mut jkc20_token_info,
           &mut jkc20_token_holder,
           &mut jkc20_token_balance,
