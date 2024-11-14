@@ -23,7 +23,7 @@ bech32 = "0.9.1"
 bigdecimal = "0.4.5"
 bincode = "1.3.3"
 bip39 = "1.0.1"
-bitcoin = { version = "0.29.1", features = ["rand"] }
+bitcoin = { version = "0.32.2", features = ["rand"] }
 boilerplate = { version = "1.0.0", features = ["axum"] }
 chrono = { version = "0.4.19", features = ["serde"] }
 clap = { version = "4.4.2", features = ["derive"] }
